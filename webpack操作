@@ -1,0 +1,158 @@
+webpack是基于nodejs运行的，所以在安装webpack之前必须先安装nodejs环境
+webpack是一个资源的打包工具，分为1.0和2.0版本，可以将 .js, .css , image等静态资源当做一个模块来进行打包，
+那么每一种模块都是有一个对应的 loader来实现
+学习webpack主要是学习相应的loader的配置
+
+node环境的安装
+直接去官网下载，下载完后分别node -v ,npm -v检查安装好没有；
+
+镜像（不能翻墙时，可采用镜像安装的办法）：
+npm install nrm -g
+nrm ls 查看当前的下载地址
+nrm use taobao 切换下载地址
+npm install webpack@1.14.0 -g（不推荐全局安装 webpack。这会将您项目中的 webpack 锁定到指定版本，
+并且在使用不同的 webpack 版本的项目中，可能会导致构建失败。）
+
+webpack指令打包演示
+webpack会把每个文件当成一个模块
+
+webpack的配置文件的使用（默认配置文件名字是webpack.config.js）
+src:放开发时的代码；
+dist:放打包后的代码；
+
+在webpack.config.js里处理：
+module.exports={
+    entry:'./src/main.js',  //指定打包的入口文件
+    output:{
+        //path:'dist'  //要求路径为绝对路径
+        path:__dirname+'/dist',
+        filename:'build.js'
+    }
+}
+
+loader:(webpack本身是不支持css等打包的，要想实现打包必须借助不同的loader)
+
+css打包：
+npm init:生成package.json（里面可以存放安装的第三方包的版本号 --save -dev）
+--save与--dev的区别：
+    --save：上线阶段所依赖的；  --dev：开发时所依赖的
+npm install css-loader style-loader --save -dev
+
+在webpack.config.js里配置：module.exports={
+                          entry:'./src/main.js',  //指定打包的入口文件
+                          output:{
+                              //path:'dist'  //要求路径为绝对路径
+                              path:__dirname+'/dist',
+                              filename:'build.js'
+                          },
+                          module:{
+                              loaders:[
+                                  {
+                                      test:/\.css$/,
+                                      loader:'style-loader!css-loader'  //顺序不能改
+                                  }，
+                                  {
+                                      test:/\.scss$/,
+                                      loader:'style-loader!css-loader!sass-loader'
+                                  }，   //sass打包时加
+                                  {
+                                       test:/\.less$/,
+                                       loader:'style-loader!css-loader!less-loader'
+                                  }，  //打包less
+                                  {
+                                        test:/\.(jpg|png|gif|ttf)$/,
+                                        loader:'url-loader?limit=40000'  //限制图片大小，<40kb，则转化成base64存放到build.js里，
+                                                                        // 如果>40kb，则是把路径放到build.js里,同时在dist里会生成图片路径
+                                  }，
+                                  {
+                                    test:/\.js$/,
+                                    loader:'babel-loader',
+                                    exclude:/node_modules/   //排除node_modules，防止加载时文件过大  es6——>es5
+                                  }
+                                ]
+                          },
+                          plugins:[
+                                new htmlwp({
+                                              title: '首页',  //生成的页面标题
+                                              filename: 'index.html', //webpack-dev-server在内存中生成的文件名称，自动将build注入到这个页面底部，才能实现自动刷新功能
+                                              template: 'index1.html' //根据index1.html这个模板来生成(这个文件请程序员自己生成)
+                                            })
+                          ]
+                          babel:{
+                          presets:['es2015'],
+                          plugins:['transform-runtine']    //es6->es5
+                          }，
+                      }
+
+在入口文件中导入site.css文件：
+            require('../statics/index.css')
+            require('../statics/index.scss')
+            require('../statics/index.less')
+            require('../statics/index.css')
+
+            es6用：
+            import('../statics/index.css' )
+
+sass打包：
+webpack中使用sass-loader，css-loader，style-loader来处理.scss文件的打包工作,而sass-loader需要依赖于node-sass所以使用前必须在项目中先安装这些包，
+并且node-sass的某些文件下载是需要去google上的，为了防止被墙而导致安装失败，所以建议使用cnpm来安装：
+安装cnpm:npm install cnpm -g；
+cnpm install node-sass sass-loader css-loader style-loader --save-dev；
+
+less打包：
+npm install less less-loader style-loader css-loader --save-dev
+
+url打包：
+ npm install url-loader file-loader --save-dev
+
+热加载：
+npm install webpack-dev-server html-webpack-plugin  --save-dev
+在package.json文件中配置webpack-dev-server命令
+    "scripts": {
+        "dev":"webpack-dev-server --inline --hot --open --port 4009"
+      }
+
+    参数说明：
+    --inline :自动刷新
+    --hot :热加载
+    --port 指定监听端口为 5200
+    -- open : 自动在默认浏览器中打开
+    -- host： 可以指定服务器的ip，不指定默认为127.0.0.1(localhost)
+
+    配置html-webpack-plugin组件
+        webpack-dev-server要实现浏览器自动刷新，必须要利用html-webpack-plugin在内存中生成index.html页面才能实现
+        html-webpack-plugin 配置步骤：
+        1、在webpack.config.js中加入如下代码：
+            // 导入html-webpack-plugin 包,获取到插件对象
+            var htmlwp = require('html-webpack-plugin');
+
+            plugins:[
+            new htmlwp({
+              title: '首页',  //生成的页面标题
+              filename: 'index.html', //webpack-dev-server在内存中生成的文件名称，自动将build注入到这个页面底部，才能实现自动刷新功能
+              template: 'index1.html' //根据index1.html这个模板来生成(这个文件请程序员自己生成)
+            })
+        ]
+
+         在cmd中执行npm run dev 命令开启 webpack-dev-server服务器来运行vue项目
+            这时候可以随便修改一个css样式，就会自动刷新看到效果
+
+es6——>es5：
+最新版的webpack自带转换功能
+es5:module.exports           require
+es6:export default           import
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
